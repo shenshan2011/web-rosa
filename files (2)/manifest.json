@@ -1,0 +1,44 @@
+{
+  "name": "BelajarCeria",
+  "short_name": "BelajarCeria",
+  "description": "Aplikasi belajar interaktif untuk Kelas 6 SD — IPA, B. Indonesia, Matematika",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#6366F1",
+  "theme_color": "#6366F1",
+  "lang": "id",
+  "categories": ["education"],
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='40' fill='%236366F1'/%3E%3Ctext x='96' y='140' font-size='110' text-anchor='middle' font-family='serif'%3E%F0%9F%8C%9F%3C/text%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='100' fill='%236366F1'/%3E%3Ctext x='256' y='370' font-size='300' text-anchor='middle' font-family='serif'%3E%F0%9F%8C%9F%3C/text%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "IPA",
+      "short_name": "IPA",
+      "description": "Buka materi IPA",
+      "url": "/?subject=ipa",
+      "icons": [{ "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Ctext y='80' font-size='80'%3E%F0%9F%94%AC%3C/text%3E%3C/svg%3E", "sizes": "96x96" }]
+    },
+    {
+      "name": "Matematika",
+      "short_name": "MTK",
+      "description": "Buka materi Matematika",
+      "url": "/?subject=mtk",
+      "icons": [{ "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Ctext y='80' font-size='80'%3E%F0%9F%94%A2%3C/text%3E%3C/svg%3E", "sizes": "96x96" }]
+    }
+  ]
+}
