@@ -12,13 +12,12 @@ const FONT_CACHE    = 'belajarceria-fonts-v1';
 
 // ── Aset yang di-pre-cache saat install ───────────────────────
 const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/style.css',
-  '/app.js',
-  '/data.js',
-  '/manifest.json',
-  // Chart.js dari CDN — di-cache agar offline tetap bisa buka monitor
+  '/belajar/',
+  '/belajar/index.html',
+  '/belajar/style.css',
+  '/belajar/app.js',
+  '/belajar/data.js',
+  '/belajar/manifest.json',
   'https://cdn.jsdelivr.net/npm/chart.js',
 ];
 
