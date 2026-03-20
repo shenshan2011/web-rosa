@@ -1869,18 +1869,14 @@ html.dark .tka-header { background: rgba(30,41,59,0.90); }
 
 /* ===== CREDIT BAR ===== */
 #creditBar {
-  position: fixed;
-  bottom: 6px;
-  left: 50%;
-  transform: translateX(-50%);
+  text-align: center;
   font-size: 0.65rem;
   color: var(--muted);
   font-weight: 600;
   letter-spacing: 0.3px;
-  pointer-events: none;
-  z-index: 10;
-  white-space: nowrap;
   opacity: 0.55;
+  padding: 16px 0 24px;
+  width: 100%;
 }
 
 /* ===== ABOUT PAGE ===== */
@@ -1959,4 +1955,54 @@ html.dark .tka-header { background: rgba(30,41,59,0.90); }
   color: var(--muted);
   font-weight: 600;
   padding: 8px 0 24px;
+}
+
+/* ===== NAVBAR MOBILE FIX ===== */
+html, body {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+@media (max-width: 600px) {
+  #app-nav {
+    padding: 0 10px;
+    gap: 6px;
+    flex-wrap: nowrap;
+    height: auto;
+    min-height: 56px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+  .nav-logo {
+    font-size: 1rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .nav-center { flex: 0; }
+  .nav-xp {
+    font-size: 0.72rem;
+    padding: 4px 8px;
+  }
+  .nav-btns {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+  .nav-btn {
+    font-size: 0.68rem;
+    padding: 5px 7px;
+    white-space: nowrap;
+  }
+  .nav-icon-btn {
+    padding: 5px 7px !important;
+    font-size: 0.85rem;
+  }
+}
+@media (max-width: 400px) {
+  .nav-btn:not(.nav-icon-btn) {
+    font-size: 0;
+    padding: 6px 8px;
+  }
+  .nav-btn#btn-home::after    { content: '🏠'; font-size: 1rem; }
+  .nav-btn#btn-monitor::after { content: '📊'; font-size: 1rem; }
+  .nav-btn#btn-about::after   { content: '👤'; font-size: 1rem; }
 }
