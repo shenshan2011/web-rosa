@@ -88,14 +88,15 @@ html.dark {
   --shadow-md: 0 4px 12px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.2);
   --shadow-lg: 0 10px 28px rgba(0,0,0,0.4), 0 4px 8px rgba(0,0,0,0.25);
   --shadow-xl: 0 20px 50px rgba(0,0,0,0.5), 0 8px 16px rgba(0,0,0,0.3);
-  --primary-lt:  rgba(99,102,241,0.18);
-  --success-lt:  rgba(34,197,94,0.15);
-  --warning-lt:  rgba(245,158,11,0.15);
-  --danger-lt:   rgba(239,68,68,0.15);
-  --info-lt:     rgba(59,130,246,0.15);
-  --ipa-lt:      rgba(16,185,129,0.15);
-  --bindo-lt:    rgba(59,130,246,0.15);
-  --mtk-lt:      rgba(239,68,68,0.15);
+  /* BUG FIX: naikkan opacity -lt agar box tidak hilang di background gelap */
+  --primary-lt:  rgba(99,102,241,0.22);
+  --success-lt:  rgba(34,197,94,0.20);
+  --warning-lt:  rgba(245,158,11,0.22);
+  --danger-lt:   rgba(239,68,68,0.20);
+  --info-lt:     rgba(59,130,246,0.20);
+  --ipa-lt:      rgba(16,185,129,0.20);
+  --bindo-lt:    rgba(59,130,246,0.20);
+  --mtk-lt:      rgba(239,68,68,0.20);
   /* BUG FIX: semantic *-dk vars lebih terang di dark mode agar terbaca */
   --success-dk:  #4ADE80;
   --warning-dk:  #FCD34D;
@@ -117,14 +118,15 @@ html.dark {
     --shadow-md: 0 4px 12px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.2);
     --shadow-lg: 0 10px 28px rgba(0,0,0,0.4), 0 4px 8px rgba(0,0,0,0.25);
     --shadow-xl: 0 20px 50px rgba(0,0,0,0.5), 0 8px 16px rgba(0,0,0,0.3);
-    --primary-lt:  rgba(99,102,241,0.18);
-    --success-lt:  rgba(34,197,94,0.15);
-    --warning-lt:  rgba(245,158,11,0.15);
-    --danger-lt:   rgba(239,68,68,0.15);
-    --info-lt:     rgba(59,130,246,0.15);
-    --ipa-lt:      rgba(16,185,129,0.15);
-    --bindo-lt:    rgba(59,130,246,0.15);
-    --mtk-lt:      rgba(239,68,68,0.15);
+    /* BUG FIX: naikkan opacity -lt agar box tidak hilang di background gelap */
+    --primary-lt:  rgba(99,102,241,0.22);
+    --success-lt:  rgba(34,197,94,0.20);
+    --warning-lt:  rgba(245,158,11,0.22);
+    --danger-lt:   rgba(239,68,68,0.20);
+    --info-lt:     rgba(59,130,246,0.20);
+    --ipa-lt:      rgba(16,185,129,0.20);
+    --bindo-lt:    rgba(59,130,246,0.20);
+    --mtk-lt:      rgba(239,68,68,0.20);
     /* BUG FIX: semantic *-dk vars lebih terang di dark mode agar terbaca */
     --success-dk:  #4ADE80;
     --warning-dk:  #FCD34D;
@@ -138,6 +140,35 @@ html.dark #app-nav { background: rgba(15, 23, 42, 0.82); }
 
 @media (prefers-color-scheme: dark) {
   html:not(.light):not(.dark) #app-nav { background: rgba(15, 23, 42, 0.82); }
+}
+
+/* ===== DARK MODE — INFO / HINT / FEEDBACK BOX BORDERS ===== */
+/*
+  Di dark mode, border hardcoded (misal #86EFAC, #FCD34D, #93C5FD) terlalu
+  terang/tidak cocok. Override semua border box notifikasi agar kontras cukup.
+*/
+html.dark .info-box,
+html.dark .hint-box        { border-color: rgba(245,158,11,0.55); }
+html.dark .info-box.green  { border-color: rgba(34,197,94,0.50); }
+html.dark .info-box.blue,
+html.dark .explanation-box { border-color: rgba(59,130,246,0.50); }
+html.dark .info-box.red    { border-color: rgba(239,68,68,0.50); }
+html.dark .feedback-box.correct { border-color: rgba(34,197,94,0.50); }
+html.dark .feedback-box.wrong   { border-color: rgba(239,68,68,0.50); }
+html.dark .topic-badge.done       { border-color: rgba(34,197,94,0.45); }
+html.dark .topic-badge.inprogress { border-color: rgba(245,158,11,0.45); }
+
+@media (prefers-color-scheme: dark) {
+  html:not(.light):not(.dark) .info-box,
+  html:not(.light):not(.dark) .hint-box        { border-color: rgba(245,158,11,0.55); }
+  html:not(.light):not(.dark) .info-box.green  { border-color: rgba(34,197,94,0.50); }
+  html:not(.light):not(.dark) .info-box.blue,
+  html:not(.light):not(.dark) .explanation-box { border-color: rgba(59,130,246,0.50); }
+  html:not(.light):not(.dark) .info-box.red    { border-color: rgba(239,68,68,0.50); }
+  html:not(.light):not(.dark) .feedback-box.correct { border-color: rgba(34,197,94,0.50); }
+  html:not(.light):not(.dark) .feedback-box.wrong   { border-color: rgba(239,68,68,0.50); }
+  html:not(.light):not(.dark) .topic-badge.done       { border-color: rgba(34,197,94,0.45); }
+  html:not(.light):not(.dark) .topic-badge.inprogress { border-color: rgba(245,158,11,0.45); }
 }
 
 /* Tabel: baris hover tetap terbaca di dark */

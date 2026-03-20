@@ -295,6 +295,20 @@ function renderQuestion() {
     setTimeout(() => { const inp = $('fillInput'); if(inp) inp.focus(); }, 100);
 
   } else {
+    // BUG FIX: Acak posisi pilihan jawaban setiap soal ditampilkan.
+    // Buat salinan opts + simpan jawaban asli, lalu shuffle bersama indeks,
+    // sehingga q._shuffledOpts dan q._shuffledAns selalu fresh per render.
+    const indices = (q.opts || []).map((_, i) => i);
+    for (let i = indices.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [indices[i], indices[j]] = [indices[j], indices[i]];
+    }
+    const shuffledOpts = indices.map(i => q.opts[i]);
+    const shuffledAns  = indices.indexOf(q.ans);
+    // Simpan ke runtime agar checkMC bisa membaca posisi baru
+    q._shuffledOpts = shuffledOpts;
+    q._shuffledAns  = shuffledAns;
+
     // Multiple choice (default)
     card.innerHTML = `
       <div class="quiz-type-badge">🎯 Pilihan Ganda</div>
@@ -304,7 +318,7 @@ function renderQuestion() {
         <div class="attempt-dot" id="dot1"></div>
       </div>
       <div class="quiz-options">
-        ${(q.opts || []).map((o, i) => `
+        ${shuffledOpts.map((o, i) => `
           <button class="quiz-option" id="opt${i}" onclick="checkMC(${i})">
             <div class="opt-letter">${'ABCD'[i]}</div>${o}
           </button>`).join('')}
@@ -318,13 +332,19 @@ function renderQuestion() {
 /* ---- Multiple Choice check ---- */
 function checkMC(idx) {
   const q   = currentQuizzes[quizIndex];
-  const correct = idx === q.ans;
+  // Gunakan posisi jawaban yang sudah diacak saat render
+  const ansIdx  = (q._shuffledAns !== undefined) ? q._shuffledAns : q.ans;
+  const correct = idx === ansIdx;
   questionAttempts++;
 
-  // Mark answer visually
+  // Mark chosen answer visually
   $$('.quiz-option').forEach(b => b.classList.add('disabled'));
   $(`opt${idx}`).classList.add(correct ? 'correct' : 'wrong');
-  if (!correct) $(`opt${q.ans}`).classList.add('correct');
+  // BUG FIX: jangan reveal jawaban benar saat percobaan pertama salah —
+  // reveal hanya dilakukan di handleAnswerResult ketika questionAttempts >= 2
+  if (!correct && questionAttempts >= 2) {
+    $(`opt${ansIdx}`)?.classList.add('correct');
+  }
 
   handleAnswerResult(correct);
 }
@@ -353,6 +373,75 @@ function handleAnswerResult(correct, fillInput = null) {
   const explBox  = $('explanationBox');
   const feedback = $('feedbackBox');
   const dot      = $(`dot${questionAttempts - 1}`);
+
+  // Gunakan posisi & label jawaban yang sudah diacak
+  const ansIdx   = (q._shuffledAns  !== undefined) ? q._shuffledAns  : q.ans;
+  const ansLabel = (q._shuffledOpts !== undefined) ? q._shuffledOpts[ansIdx] : (q.opts ? q.opts[q.ans] : q.ans);
+
+  if (dot) dot.classList.add('used');
+
+  if (correct) {
+    // Correct!
+    const xpGain = questionAttempts === 1 ? 5 : 2;
+    addXP(xpGain);
+    quizScore++;
+    playSound('correct');
+
+    feedback.className = 'feedback-box correct';
+    feedback.innerHTML = `✅ Benar! ${questionAttempts === 1 ? '+5 XP 🎉' : '+2 XP'}`;
+    feedback.style.display = 'block';
+
+    if (fillInput) { fillInput.disabled = true; }
+    $$('.quiz-option').forEach(b => b.classList.add('disabled'));
+
+    $('quizBtnRow').innerHTML = `<button class="btn" onclick="nextQuestion()">Lanjut →</button>`;
+
+  } else {
+    // Wrong
+    quizWrong++;
+    playSound('wrong');
+
+    if (questionAttempts === 1) {
+      // First wrong → show HINT only, don't reveal answer
+      feedback.className = 'feedback-box wrong';
+      feedback.innerHTML = '❌ Salah. Coba lagi! Lihat petunjuk di bawah.';
+      feedback.style.display = 'block';
+
+      if (hintBox) hintBox.style.display = 'flex';
+
+      // Re-enable fill input for another try
+      if (fillInput) {
+        fillInput.value   = '';
+        fillInput.disabled = false;
+        setTimeout(() => fillInput.focus(), 50);
+        feedback.innerHTML = '❌ Kurang tepat. Lihat petunjuk, lalu coba sekali lagi!';
+      }
+
+      // Re-enable MC options (reset wrong mark)
+      $$('.quiz-option').forEach(b => {
+        b.classList.remove('disabled', 'wrong');
+      });
+
+    } else {
+      // Second wrong → show EXPLANATION + reveal answer
+      if (hintBox) hintBox.style.display = 'flex';
+      if (explBox) explBox.style.display = 'flex';
+
+      feedback.className = 'feedback-box wrong';
+      if (q.type === 'fill') {
+        feedback.innerHTML = `❌ Jawaban yang benar: <strong>${q.ans}</strong>`;
+        if (fillInput) fillInput.disabled = true;
+      } else {
+        feedback.innerHTML = `❌ Jawaban yang benar: <strong>${ansLabel}</strong>`;
+        $$('.quiz-option').forEach(b => b.classList.add('disabled'));
+        $(`opt${ansIdx}`)?.classList.add('correct');
+      }
+      feedback.style.display = 'block';
+
+      $('quizBtnRow').innerHTML = `<button class="btn" onclick="nextQuestion()">Lanjut →</button>`;
+    }
+  }
+}
 
   if (dot) dot.classList.add('used');
 
@@ -886,9 +975,29 @@ function resetAll() {
     closeModal();
     // Jalankan reset setelah modal selesai menutup
     setTimeout(() => {
+      // Reset semua data STATE (xp, streak, read, quizScores, quizAttempts, activity, tkaHistory, dll.)
       STATE.reset();
+
+      // BUG FIX: reset juga runtime quiz state agar tidak ada sisa dari sesi sebelumnya
+      quizIndex        = 0;
+      quizScore        = 0;
+      quizWrong        = 0;
+      questionAttempts = 0;
+      currentQuizzes   = [];
+      currentSubject   = '';
+      currentTopicId   = '';
+      currentFlashcards = [];
+      fcIndex          = 0;
+
+      // Update tampilan beranda
       updateHome();
+
+      // BUG FIX: update juga tampilan monitor agar datanya ikut terhapus dari UI
+      updateMonitor();
+
+      // Reset badge UI
       $$('.badge').forEach(b => { b.classList.add('locked'); b.classList.remove('earned'); });
+
       showToast('🗑️ Semua data telah direset.');
     }, 260);
   });
