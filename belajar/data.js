@@ -6002,14 +6002,14 @@ const QUIZ_DATA_MTK_2 = {
   ],
 
 };
-
-// ============================================================
-//  BATCH 3 — SELESAI LENGKAP (mtk-1 s.d. mtk-9)
-//  Total: 9 topik × 15 soal = 135 soal
-//  Cara penggabungan:
-//  Object.assign(QUIZ_DATA, QUIZ_DATA_MTK_1, QUIZ_DATA_MTK_2);
-// ============================================================
-};
+// ── Gabungkan semua batch soal ke QUIZ_DATA utama ──────────
+Object.assign(QUIZ_DATA,
+  typeof QUIZ_DATA_PART2     !== 'undefined' ? QUIZ_DATA_PART2     : {},
+  typeof QUIZ_DATA_BINDO_1   !== 'undefined' ? QUIZ_DATA_BINDO_1   : {},
+  typeof QUIZ_DATA_BINDO_2   !== 'undefined' ? QUIZ_DATA_BINDO_2   : {},
+  typeof QUIZ_DATA_MTK_1     !== 'undefined' ? QUIZ_DATA_MTK_1     : {},
+  typeof QUIZ_DATA_MTK_2     !== 'undefined' ? QUIZ_DATA_MTK_2     : {}
+);
 
 const TKA_DATA = {
 

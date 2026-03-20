@@ -805,7 +805,6 @@ function updateMonitor() {
       }).join('');
     }
   }
-  }
   // ── 5. TKA History ──────────────────────────────────────────
   const tkaHistEl = $('tkaHistoryList');
   if (tkaHistEl) {
