@@ -8,8 +8,9 @@
 const STATE = (() => {
   const KEY = 'bc-v3';
   const defaults = {
-    xp: 0, streak: 0, lastDate: '',
+    xp: 0, streak: 0, lastDate: '', name: '',
     read: {}, quizScores: {}, quizAttempts: {}, activity: [],
+    tkaHistory: [],
   };
   let data = { ...defaults };
   try { data = { ...defaults, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch(_) {}
@@ -736,22 +737,7 @@ function updateMonitor() {
                 callback: v => v + '%',
                 maxTicksLimit: 6,
               },
-              // Garis referensi 60 & 80
-              afterDatasetsDraw(chart) {
-                const { ctx: c, chartArea: { top, bottom }, scales: { x } } = chart;
-                [60, 80].forEach((val, i) => {
-                  const xPos = x.getPixelForValue(val);
-                  c.save();
-                  c.setLineDash([4, 4]);
-                  c.strokeStyle = i === 0 ? '#F59E0B' : '#22C55E';
-                  c.lineWidth   = 1.5;
-                  c.beginPath();
-                  c.moveTo(xPos, top);
-                  c.lineTo(xPos, bottom);
-                  c.stroke();
-                  c.restore();
-                });
-              },
+
             },
             y: {
               grid:  { display: false },
@@ -762,6 +748,25 @@ function updateMonitor() {
             },
           },
         },
+        plugins: [{
+          id: 'refLines',
+          afterDatasetsDraw(chart) {
+            const { ctx: c, chartArea: { top, bottom }, scales: { x } } = chart;
+            if (!x) return;
+            [[60, '#F59E0B'], [80, '#22C55E']].forEach(([val, color]) => {
+              const xPos = x.getPixelForValue(val);
+              c.save();
+              c.setLineDash([4, 4]);
+              c.strokeStyle = color;
+              c.lineWidth = 1.5;
+              c.beginPath();
+              c.moveTo(xPos, top);
+              c.lineTo(xPos, bottom);
+              c.stroke();
+              c.restore();
+            });
+          }
+        }],
       });
     }
   }
@@ -800,6 +805,37 @@ function updateMonitor() {
       }).join('');
     }
   }
+  }
+  // ── 5. TKA History ──────────────────────────────────────────
+  const tkaHistEl = $('tkaHistoryList');
+  if (tkaHistEl) {
+    const hist = (s.tkaHistory || []).slice(0, 5);
+    if (hist.length === 0) {
+      tkaHistEl.innerHTML = '<div class="empty-state"><span class="empty-state-icon">🏆</span>Belum ada riwayat TKA</div>';
+    } else {
+      tkaHistEl.innerHTML = hist.map(h => {
+        const cfg   = TKA_CONFIG[h.subject] || { label: h.subject, color: 'var(--primary)' };
+        const color = h.nilai >= 75 ? 'var(--success)' : h.nilai >= 60 ? 'var(--warning)' : 'var(--danger)';
+        const dateStr = new Date(h.date).toLocaleDateString('id-ID', { day:'2-digit', month:'short', year:'numeric' });
+        return `
+          <div class="monitor-card">
+            <div class="monitor-row">
+              <span class="monitor-topic">${cfg.label}</span>
+              <span style="font-weight:800;color:${color}">${h.nilai}</span>
+            </div>
+            <div style="font-size:0.76rem;color:var(--muted);display:flex;gap:12px;margin-top:2px">
+              <span>✅ ${h.benar}/${h.total} benar</span>
+              <span>⏱ ${h.durasi}</span>
+              <span>📅 ${dateStr}</span>
+            </div>
+            <div class="mini-bar" style="margin-top:8px">
+              <div class="mini-fill" style="background:${color};width:${h.nilai}%"></div>
+            </div>
+          </div>`;
+      }).join('');
+    }
+  }
+
 }
 
 function findTopic(id) {
@@ -1112,3 +1148,429 @@ function showOnboarding() {
     if (e.key === 'Enter') submit();
   });
 }
+
+// ============================================================
+//  TKA — SIMULASI UJIAN
+//  Variabel, fungsi, dan integrasi STATE
+// ============================================================
+
+/* ── STATE defaults: tambahkan tkaHistory ──────────────────
+   Cara pakai: STATE sudah ada, kita patch defaults saat init
+   dengan mengecek & mengisi tkaHistory jika belum ada.       */
+(function patchTKAState() {
+  const s = STATE.get();
+  if (!s.tkaHistory) { s.tkaHistory = []; STATE.save(); }
+})();
+
+/* ── Runtime variables ─────────────────────────────────────── */
+let tkaSubject      = '';
+let tkaQuestions    = [];
+let tkaAnswers      = {};         // { index: optionIndex }
+let tkaMarked       = new Set();  // Set of question indices
+let tkaCurrentIndex = 0;
+let tkaTimerHandle  = null;
+let tkaSecondsLeft  = 0;
+let tkaStartTime    = null;
+
+/* ── Konfigurasi per mapel ─────────────────────────────────── */
+const TKA_CONFIG = {
+  ipa:   { label: '🔬 IPA',         total: 40, duration: 90 * 60, color: 'var(--ipa)' },
+  bindo: { label: '📚 B. Indonesia', total: 40, duration: 90 * 60, color: 'var(--bindo)' },
+  mtk:   { label: '🔢 Matematika',   total: 35, duration: 90 * 60, color: 'var(--mtk)' },
+};
+
+// ============================================================
+//  startTKA(subject)
+// ============================================================
+function startTKA(subject) {
+  if (!TKA_DATA || !TKA_DATA[subject] || TKA_DATA[subject].length === 0) {
+    showToast('⚠️ Data soal TKA belum tersedia.');
+    return;
+  }
+
+  tkaSubject      = subject;
+  tkaAnswers      = {};
+  tkaMarked       = new Set();
+  tkaCurrentIndex = 0;
+  tkaStartTime    = Date.now();
+
+  const cfg   = TKA_CONFIG[subject];
+  const pool  = [...TKA_DATA[subject]];
+  // Fisher-Yates shuffle
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  tkaQuestions = pool.slice(0, cfg.total);
+
+  // Set timer
+  tkaSecondsLeft = cfg.duration;
+
+  // Update header info sebelum tampil
+  const hdrEl = $('tkaSubjectLabel');
+  if (hdrEl) hdrEl.textContent = cfg.label;
+
+  showPage('tka');
+  renderTKAQuestion(0);
+  startTKATimer();
+}
+
+// ============================================================
+//  renderTKAQuestion(index)
+// ============================================================
+function renderTKAQuestion(index) {
+  if (index < 0 || index >= tkaQuestions.length) return;
+  tkaCurrentIndex = index;
+
+  const q     = tkaQuestions[index];
+  const total = tkaQuestions.length;
+  const cfg   = TKA_CONFIG[tkaSubject];
+
+  // Nomor soal
+  const numEl = $('tkaQNum');
+  if (numEl) numEl.textContent = `Soal ${index + 1} / ${total}`;
+
+  // Area teks soal — ganti \n jadi <br>
+  const qEl = $('tkaQuestionText');
+  if (qEl) qEl.innerHTML = q.q.replace(/\n/g, '<br>');
+
+  // Topik & Level badge
+  const badgeEl = $('tkaTopicBadge');
+  if (badgeEl) badgeEl.textContent = `${q.topic} • ${q.level}`;
+
+  // Opsi jawaban
+  const optContainer = $('tkaOptions');
+  if (optContainer) {
+    optContainer.innerHTML = q.opts.map((opt, i) => {
+      const isSelected = tkaAnswers[index] === i;
+      return `<button class="tka-option${isSelected ? ' selected' : ''}"
+                      onclick="selectTKAAnswer(${index}, ${i})">
+                <span class="tka-opt-letter">${'ABCD'[i]}</span>
+                <span>${opt}</span>
+              </button>`;
+    }).join('');
+  }
+
+  // Tandai button
+  const markBtn = $('tkaMarkBtn');
+  if (markBtn) {
+    const isMarked = tkaMarked.has(index);
+    markBtn.textContent = isMarked ? '⭐ Ditandai' : '☆ Tandai';
+    markBtn.classList.toggle('marked', isMarked);
+  }
+
+  // Tombol navigasi
+  const prevBtn = $('tkaPrevBtn');
+  const nextBtn = $('tkaNextBtn');
+  if (prevBtn) prevBtn.disabled = index === 0;
+  if (nextBtn) nextBtn.textContent = index === total - 1 ? 'Selesai 🏁' : 'Lanjut →';
+
+  // Update nav grid
+  renderTKANavGrid();
+}
+
+// ============================================================
+//  renderTKANavGrid()
+// ============================================================
+function renderTKANavGrid() {
+  const grid = $('tkaNavGrid');
+  if (!grid) return;
+
+  grid.innerHTML = tkaQuestions.map((_, i) => {
+    let cls = 'tka-nav-btn';
+    if (tkaAnswers[i] !== undefined) cls += ' answered';
+    if (tkaMarked.has(i))            cls += ' marked';
+    if (i === tkaCurrentIndex)       cls += ' active';
+    return `<button class="${cls}" onclick="renderTKAQuestion(${i})">${i + 1}</button>`;
+  }).join('');
+
+  // Scroll tombol aktif ke tengah grid
+  setTimeout(() => {
+    const activeBtn = grid.querySelector('.tka-nav-btn.active');
+    if (activeBtn) activeBtn.scrollIntoView({ inline: 'center', behavior: 'smooth' });
+  }, 50);
+}
+
+// ============================================================
+//  selectTKAAnswer(index, optIdx)
+// ============================================================
+function selectTKAAnswer(index, optIdx) {
+  tkaAnswers[index] = optIdx;
+
+  // Update visual opsi
+  const buttons = document.querySelectorAll('.tka-option');
+  buttons.forEach((btn, i) => {
+    btn.classList.toggle('selected', i === optIdx);
+  });
+
+  renderTKANavGrid();
+}
+
+// ============================================================
+//  toggleTKAMark(index)
+// ============================================================
+function toggleTKAMark(index) {
+  if (tkaMarked.has(index)) {
+    tkaMarked.delete(index);
+  } else {
+    tkaMarked.add(index);
+  }
+  renderTKAQuestion(index);
+}
+
+// ============================================================
+//  tkaPrev() / tkaNext()
+// ============================================================
+function tkaPrev() {
+  if (tkaCurrentIndex > 0) renderTKAQuestion(tkaCurrentIndex - 1);
+}
+
+function tkaNext() {
+  if (tkaCurrentIndex < tkaQuestions.length - 1) {
+    renderTKAQuestion(tkaCurrentIndex + 1);
+  } else {
+    // Di soal terakhir → tombol jadi "Selesai"
+    confirmSubmitTKA();
+  }
+}
+
+// ============================================================
+//  startTKATimer() / tickTKATimer()
+// ============================================================
+function startTKATimer() {
+  if (tkaTimerHandle) clearInterval(tkaTimerHandle);
+  tkaTimerHandle = setInterval(tickTKATimer, 1000);
+  updateTKATimerDisplay();
+}
+
+function stopTKATimer() {
+  if (tkaTimerHandle) { clearInterval(tkaTimerHandle); tkaTimerHandle = null; }
+}
+
+function tickTKATimer() {
+  tkaSecondsLeft--;
+  updateTKATimerDisplay();
+  if (tkaSecondsLeft <= 0) {
+    stopTKATimer();
+    submitTKA(true);
+  }
+}
+
+function updateTKATimerDisplay() {
+  const el = $('tkaTimer');
+  if (!el) return;
+
+  const m = String(Math.floor(tkaSecondsLeft / 60)).padStart(2, '0');
+  const s = String(tkaSecondsLeft % 60).padStart(2, '0');
+  el.textContent = `⏱ ${m}:${s}`;
+
+  el.classList.remove('warn', 'danger');
+  if (tkaSecondsLeft <= 3 * 60)       el.classList.add('danger');
+  else if (tkaSecondsLeft <= 10 * 60) el.classList.add('warn');
+}
+
+// ============================================================
+//  confirmSubmitTKA() — modal konfirmasi
+// ============================================================
+function confirmSubmitTKA() {
+  const unanswered = tkaQuestions.length - Object.keys(tkaAnswers).length;
+
+  if (unanswered > 0) {
+    // Ada soal belum dijawab → tampilkan modal konfirmasi
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
+      <div class="modal-box" role="dialog" aria-modal="true">
+        <div class="modal-icon">⚠️</div>
+        <h2 class="modal-title">Yakin Selesai?</h2>
+        <p class="modal-msg">Masih ada <strong>${unanswered} soal</strong> yang belum kamu jawab.<br>Soal yang tidak dijawab dihitung <strong>salah</strong>.</p>
+        <div class="modal-actions">
+          <button class="btn modal-btn-cancel" id="tkaModalCancel">Lanjut Kerjakan</button>
+          <button class="btn modal-btn-confirm" id="tkaModalConfirm">Kumpulkan</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+
+    requestAnimationFrame(() => overlay.classList.add('modal-visible'));
+
+    function closeModal() {
+      overlay.classList.remove('modal-visible');
+      setTimeout(() => overlay.remove(), 250);
+    }
+
+    $('tkaModalCancel').addEventListener('click', closeModal);
+    overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+    $('tkaModalConfirm').addEventListener('click', () => { closeModal(); submitTKA(false); });
+  } else {
+    submitTKA(false);
+  }
+}
+
+// ============================================================
+//  submitTKA(forced)
+// ============================================================
+function submitTKA(forced = false) {
+  stopTKATimer();
+
+  const total = tkaQuestions.length;
+  let benar   = 0;
+
+  // Hitung benar & breakdown per topik
+  const breakdown = {};
+  tkaQuestions.forEach((q, i) => {
+    if (!breakdown[q.topic]) breakdown[q.topic] = { benar: 0, total: 0 };
+    breakdown[q.topic].total++;
+    if (tkaAnswers[i] === q.ans) {
+      benar++;
+      breakdown[q.topic].benar++;
+    }
+  });
+
+  const nilai  = Math.round((benar / total) * 100);
+  const durasi = Date.now() - tkaStartTime;
+  const mm     = String(Math.floor(durasi / 60000)).padStart(2, '0');
+  const ss     = String(Math.floor((durasi % 60000) / 1000)).padStart(2, '0');
+  const durasiStr = `${mm}:${ss}`;
+
+  // Simpan ke STATE
+  const s = STATE.get();
+  if (!s.tkaHistory) s.tkaHistory = [];
+  s.tkaHistory.unshift({
+    subject: tkaSubject,
+    nilai,
+    benar,
+    total,
+    durasi: durasiStr,
+    date: new Date().toISOString(),
+    breakdown,
+  });
+  if (s.tkaHistory.length > 20) s.tkaHistory.pop(); // Max 20 riwayat
+  STATE.save();
+
+  addActivity(
+    `🏆 TKA ${TKA_CONFIG[tkaSubject]?.label || tkaSubject}: ${nilai}`,
+    nilai >= 75 ? 'var(--success)' : nilai >= 60 ? 'var(--warning)' : 'var(--danger)'
+  );
+  addXP(Math.floor(nilai / 2)); // Bonus XP dari TKA
+
+  // Tampilkan hasil
+  showTKAResult({ nilai, benar, total, durasiStr, breakdown });
+}
+
+// ============================================================
+//  showTKAResult(data)
+// ============================================================
+function showTKAResult({ nilai, benar, total, durasiStr, breakdown }) {
+  showPage('tka-result');
+
+  // Lingkaran nilai
+  const circleEl = $('tkaResultScore');
+  if (circleEl) circleEl.textContent = nilai;
+
+  // Kategori
+  let kategori, katColor;
+  if (nilai >= 85)      { kategori = '🏆 Luar Biasa!';     katColor = 'var(--success)'; }
+  else if (nilai >= 70) { kategori = '👏 Bagus Sekali!';   katColor = 'var(--primary)'; }
+  else if (nilai >= 60) { kategori = '💪 Cukup Baik';       katColor = 'var(--warning)'; }
+  else                  { kategori = '📚 Perlu Belajar Lagi'; katColor = 'var(--danger)'; }
+
+  const katEl = $('tkaResultKategori');
+  if (katEl) { katEl.textContent = kategori; katEl.style.color = katColor; }
+
+  // Statistik
+  const statsEl = $('tkaResultStats');
+  if (statsEl) {
+    statsEl.innerHTML = `
+      <div class="tka-result-stat"><div class="tka-stat-num" style="color:var(--success)">${benar}</div><div class="tka-stat-lbl">Benar</div></div>
+      <div class="tka-result-stat"><div class="tka-stat-num" style="color:var(--danger)">${total - benar}</div><div class="tka-stat-lbl">Salah</div></div>
+      <div class="tka-result-stat"><div class="tka-stat-num" style="color:var(--primary)">${durasiStr}</div><div class="tka-stat-lbl">Durasi</div></div>`;
+  }
+
+  // Breakdown per topik
+  const bkEl = $('tkaBreakdown');
+  if (bkEl) {
+    bkEl.innerHTML = Object.entries(breakdown).map(([topic, data]) => {
+      const pct   = Math.round((data.benar / data.total) * 100);
+      const color = pct >= 75 ? 'var(--success)' : pct >= 50 ? 'var(--warning)' : 'var(--danger)';
+      return `
+        <div class="tka-breakdown">
+          <div class="monitor-row">
+            <span style="font-weight:800;font-size:0.9rem">${topic}</span>
+            <span style="font-weight:800;color:${color}">${data.benar}/${data.total} (${pct}%)</span>
+          </div>
+          <div class="mini-bar">
+            <div class="mini-fill" style="background:${color};width:${pct}%"></div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  // Review soal yang salah
+  const reviewEl = $('tkaReview');
+  if (reviewEl) {
+    const wrongQuestions = tkaQuestions
+      .map((q, i) => ({ q, i, userAns: tkaAnswers[i] }))
+      .filter(({ q, userAns }) => userAns !== q.ans);
+
+    if (wrongQuestions.length === 0) {
+      reviewEl.innerHTML = '<div class="empty-state"><span class="empty-state-icon">🎉</span>Semua soal benar! Luar biasa!</div>';
+    } else {
+      reviewEl.innerHTML = wrongQuestions.map(({ q, i, userAns }) => `
+        <div class="tka-review-item">
+          <div class="tka-review-num">Soal ${i + 1} — ${q.topic}</div>
+          <div class="tka-review-q">${q.q.replace(/\n/g, '<br>')}</div>
+          <div class="tka-review-ans">
+            <span class="tka-ans-wrong">✗ Jawabanmu: ${userAns !== undefined ? q.opts[userAns] : '(Tidak dijawab)'}</span>
+            <span class="tka-ans-correct">✓ Jawaban benar: ${q.opts[q.ans]}</span>
+          </div>
+          <details class="tka-review-explain">
+            <summary>📘 Lihat Pembahasan</summary>
+            <p>${q.explanation}</p>
+          </details>
+        </div>`).join('');
+    }
+  }
+}
+
+
+// ============================================================
+//  confirmExitTKA() — modal konfirmasi keluar TKA
+// ============================================================
+function confirmExitTKA() {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-box" role="dialog" aria-modal="true">
+      <div class="modal-icon">⚠️</div>
+      <h2 class="modal-title">Keluar dari TKA?</h2>
+      <p class="modal-msg">Semua jawaban yang sudah kamu isi akan <strong>hilang</strong>. Yakin mau keluar?</p>
+      <div class="modal-actions">
+        <button class="btn modal-btn-cancel" id="exitTKACancel">Lanjut Kerjakan</button>
+        <button class="btn modal-btn-confirm" id="exitTKAConfirm">Keluar</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => overlay.classList.add('modal-visible'));
+
+  function closeModal() {
+    overlay.classList.remove('modal-visible');
+    setTimeout(() => overlay.remove(), 250);
+  }
+
+  document.getElementById('exitTKACancel').addEventListener('click', closeModal);
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+  document.getElementById('exitTKAConfirm').addEventListener('click', () => {
+    closeModal();
+    stopTKATimer();
+    showPage('home');
+  });
+}
+
+// ============================================================
+//  retryTKA() — ulangi TKA mapel yang sama
+// ============================================================
+function retryTKA() {
+  startTKA(tkaSubject);
+}
+
+

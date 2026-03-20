@@ -16,6 +16,7 @@ const STATIC_ASSETS = [
   '/app.js',
   '/data.js',
   '/manifest.json',
+  // data.js berisi TKA_DATA yang besar — selalu di-cache
   '/icon-192.png',
   '/icon-512.png',
   'https://cdn.jsdelivr.net/npm/chart.js',

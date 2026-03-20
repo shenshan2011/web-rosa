@@ -130,6 +130,29 @@
             style="font-size:0.78rem;padding:8px 18px;opacity:0.6">🗑️ Reset Data</button>
   </div>
 
+  <!-- ── TKA SECTION ── -->
+  <div class="section-label" style="margin-top:28px">🏆 Simulasi TKA</div>
+  <div class="tka-grid">
+    <div class="tka-card ipa" onclick="startTKA('ipa')">
+      <span class="tka-badge-label">TKA</span>
+      <span class="tka-card-emoji">🔬</span>
+      <div class="tka-card-title">TKA IPA</div>
+      <div class="tka-card-meta">40 Soal • 90 Menit</div>
+    </div>
+    <div class="tka-card bindo" onclick="startTKA('bindo')">
+      <span class="tka-badge-label">TKA</span>
+      <span class="tka-card-emoji">📚</span>
+      <div class="tka-card-title">TKA B. Indonesia</div>
+      <div class="tka-card-meta">40 Soal • 90 Menit</div>
+    </div>
+    <div class="tka-card mtk" onclick="startTKA('mtk')">
+      <span class="tka-badge-label">TKA</span>
+      <span class="tka-card-emoji">🔢</span>
+      <div class="tka-card-title">TKA Matematika</div>
+      <div class="tka-card-meta">35 Soal • 90 Menit</div>
+    </div>
+  </div>
+
 </div><!-- /#page-home -->
 
 
@@ -287,7 +310,92 @@
     </div>
   </div>
 
+  <!-- Riwayat TKA -->
+  <div class="section-label">🏆 Riwayat TKA</div>
+  <div class="monitor-section" id="tkaHistoryList">
+    <div class="empty-state">
+      <span class="empty-state-icon">🏆</span>Belum ada riwayat TKA
+    </div>
+  </div>
+
 </div><!-- /#page-monitor -->
+
+
+<!-- PAGE 8 — TKA UJIAN -->
+<div class="page" id="page-tka">
+  <!-- Sticky Header -->
+  <div class="tka-header" id="tkaHeader">
+    <div class="tka-header-left">
+      <button class="back-btn" onclick="confirmExitTKA()">←</button>
+      <div>
+        <div class="tka-subject-label" id="tkaSubjectLabel">TKA</div>
+        <div class="tka-qnum" id="tkaQNum">Soal 1 / 40</div>
+      </div>
+    </div>
+    <div class="tka-timer" id="tkaTimer">⏱ 90:00</div>
+    <button class="btn tka-submit-btn" onclick="confirmSubmitTKA()">Kumpulkan 🏁</button>
+  </div>
+
+  <!-- Soal -->
+  <div class="tka-question-area">
+    <div class="tka-topic-badge" id="tkaTopicBadge"></div>
+    <div class="tka-question" id="tkaQuestionText">Memuat soal…</div>
+    <div class="tka-options" id="tkaOptions"></div>
+  </div>
+
+  <!-- Navigasi Soal (grid nomor) -->
+  <div class="tka-nav-section">
+    <div class="tka-nav-label">Navigasi Soal</div>
+    <div class="tka-nav-grid" id="tkaNavGrid"></div>
+    <div class="tka-nav-legend">
+      <span class="tka-legend-item"><span class="tka-legend-dot answered"></span>Dijawab</span>
+      <span class="tka-legend-item"><span class="tka-legend-dot marked"></span>Ditandai</span>
+      <span class="tka-legend-item"><span class="tka-legend-dot"></span>Belum</span>
+    </div>
+  </div>
+
+  <!-- Kontrol bawah -->
+  <div class="tka-controls">
+    <button class="btn secondary" id="tkaMarkBtn" onclick="toggleTKAMark(tkaCurrentIndex)">☆ Tandai</button>
+    <div class="tka-nav-arrows">
+      <button class="btn secondary" id="tkaPrevBtn" onclick="tkaPrev()">← Prev</button>
+      <button class="btn" id="tkaNextBtn" onclick="tkaNext()">Lanjut →</button>
+    </div>
+  </div>
+</div><!-- /#page-tka -->
+
+
+<!-- PAGE 9 — TKA HASIL -->
+<div class="page" id="page-tka-result">
+  <div class="page-header">
+    <button class="back-btn" onclick="showPage('home')">←</button>
+    <div class="page-title">📊 Hasil TKA</div>
+  </div>
+
+  <!-- Lingkaran nilai -->
+  <div class="tka-result-wrap">
+    <div class="tka-result-circle">
+      <div class="tka-result-score" id="tkaResultScore">0</div>
+      <div class="tka-result-score-lbl">Nilai</div>
+    </div>
+    <div class="tka-result-kategori" id="tkaResultKategori">—</div>
+    <div class="tka-result-stats" id="tkaResultStats"></div>
+  </div>
+
+  <!-- Breakdown per topik -->
+  <div class="section-label" style="margin-top:24px">📊 Breakdown Per Topik</div>
+  <div class="monitor-section" id="tkaBreakdown"></div>
+
+  <!-- Review soal salah -->
+  <div class="section-label">❌ Review Soal yang Salah</div>
+  <div id="tkaReview" class="tka-review-list"></div>
+
+  <!-- Tombol aksi -->
+  <div class="btn-row" style="justify-content:center;margin-top:24px;margin-bottom:16px">
+    <button class="btn" onclick="retryTKA()">🔄 Ulangi TKA</button>
+    <button class="btn secondary" onclick="showPage('home')">🏠 Beranda</button>
+  </div>
+</div><!-- /#page-tka-result -->
 
 
 <!-- SCRIPTS: Chart.js CDN, lalu data.js, lalu app.js -->
