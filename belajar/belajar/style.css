@@ -70,10 +70,7 @@
       (hanya aktif jika belum ada preferensi manual)
 */
 
-/* NOTE: blok :is() dengan @media di dalamnya dihapus —
-   sintaks tersebut tidak valid dan diabaikan browser.
-   Kedua kasus (html.dark & prefers-color-scheme) sudah dicakup
-   oleh blok terpisah di bawah. */
+/* :is() dengan @media di dalam selector dihapus — sintaks tidak valid di semua browser */
 
 /* Kelas manual: html.dark */
 html.dark {
@@ -88,7 +85,7 @@ html.dark {
   --shadow-md: 0 4px 12px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.2);
   --shadow-lg: 0 10px 28px rgba(0,0,0,0.4), 0 4px 8px rgba(0,0,0,0.25);
   --shadow-xl: 0 20px 50px rgba(0,0,0,0.5), 0 8px 16px rgba(0,0,0,0.3);
-  /* BUG FIX: naikkan opacity -lt agar box tidak hilang di background gelap */
+  /* FIX: naikkan opacity -lt agar box terlihat di atas surface gelap */
   --primary-lt:  rgba(99,102,241,0.22);
   --success-lt:  rgba(34,197,94,0.20);
   --warning-lt:  rgba(245,158,11,0.22);
@@ -97,7 +94,7 @@ html.dark {
   --ipa-lt:      rgba(16,185,129,0.20);
   --bindo-lt:    rgba(59,130,246,0.20);
   --mtk-lt:      rgba(239,68,68,0.20);
-  /* BUG FIX: semantic *-dk vars lebih terang di dark mode agar terbaca */
+  /* FIX: *-dk jadi warna terang agar teks terbaca di background gelap */
   --success-dk:  #4ADE80;
   --warning-dk:  #FCD34D;
   --danger-dk:   #FCA5A5;
@@ -118,7 +115,6 @@ html.dark {
     --shadow-md: 0 4px 12px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.2);
     --shadow-lg: 0 10px 28px rgba(0,0,0,0.4), 0 4px 8px rgba(0,0,0,0.25);
     --shadow-xl: 0 20px 50px rgba(0,0,0,0.5), 0 8px 16px rgba(0,0,0,0.3);
-    /* BUG FIX: naikkan opacity -lt agar box tidak hilang di background gelap */
     --primary-lt:  rgba(99,102,241,0.22);
     --success-lt:  rgba(34,197,94,0.20);
     --warning-lt:  rgba(245,158,11,0.22);
@@ -127,7 +123,6 @@ html.dark {
     --ipa-lt:      rgba(16,185,129,0.20);
     --bindo-lt:    rgba(59,130,246,0.20);
     --mtk-lt:      rgba(239,68,68,0.20);
-    /* BUG FIX: semantic *-dk vars lebih terang di dark mode agar terbaca */
     --success-dk:  #4ADE80;
     --warning-dk:  #FCD34D;
     --danger-dk:   #FCA5A5;
@@ -137,38 +132,8 @@ html.dark {
 
 /* Nav glassmorphism — dark variant */
 html.dark #app-nav { background: rgba(15, 23, 42, 0.82); }
-
 @media (prefers-color-scheme: dark) {
   html:not(.light):not(.dark) #app-nav { background: rgba(15, 23, 42, 0.82); }
-}
-
-/* ===== DARK MODE — INFO / HINT / FEEDBACK BOX BORDERS ===== */
-/*
-  Di dark mode, border hardcoded (misal #86EFAC, #FCD34D, #93C5FD) terlalu
-  terang/tidak cocok. Override semua border box notifikasi agar kontras cukup.
-*/
-html.dark .info-box,
-html.dark .hint-box        { border-color: rgba(245,158,11,0.55); }
-html.dark .info-box.green  { border-color: rgba(34,197,94,0.50); }
-html.dark .info-box.blue,
-html.dark .explanation-box { border-color: rgba(59,130,246,0.50); }
-html.dark .info-box.red    { border-color: rgba(239,68,68,0.50); }
-html.dark .feedback-box.correct { border-color: rgba(34,197,94,0.50); }
-html.dark .feedback-box.wrong   { border-color: rgba(239,68,68,0.50); }
-html.dark .topic-badge.done       { border-color: rgba(34,197,94,0.45); }
-html.dark .topic-badge.inprogress { border-color: rgba(245,158,11,0.45); }
-
-@media (prefers-color-scheme: dark) {
-  html:not(.light):not(.dark) .info-box,
-  html:not(.light):not(.dark) .hint-box        { border-color: rgba(245,158,11,0.55); }
-  html:not(.light):not(.dark) .info-box.green  { border-color: rgba(34,197,94,0.50); }
-  html:not(.light):not(.dark) .info-box.blue,
-  html:not(.light):not(.dark) .explanation-box { border-color: rgba(59,130,246,0.50); }
-  html:not(.light):not(.dark) .info-box.red    { border-color: rgba(239,68,68,0.50); }
-  html:not(.light):not(.dark) .feedback-box.correct { border-color: rgba(34,197,94,0.50); }
-  html:not(.light):not(.dark) .feedback-box.wrong   { border-color: rgba(239,68,68,0.50); }
-  html:not(.light):not(.dark) .topic-badge.done       { border-color: rgba(34,197,94,0.45); }
-  html:not(.light):not(.dark) .topic-badge.inprogress { border-color: rgba(245,158,11,0.45); }
 }
 
 /* Tabel: baris hover tetap terbaca di dark */
@@ -238,7 +203,7 @@ button { cursor: pointer; font-family: 'Nunito', sans-serif; }
 .nav-center { display: flex; align-items: center; gap: 8px; flex: 1; justify-content: center; }
 .nav-xp {
   background: var(--warning-lt);
-  border: 1.5px solid #FDE68A;
+  border: 1.5px solid rgba(245,158,11,0.45);
   border-radius: var(--r-full);
   padding: 5px 14px;
   color: var(--warning-dk);
@@ -502,7 +467,7 @@ button { cursor: pointer; font-family: 'Nunito', sans-serif; }
 }
 .badge.earned {
   background: var(--warning-lt);
-  border-color: #FDE68A;
+  border-color: rgba(245,158,11,0.45);
   box-shadow: 0 2px 10px rgba(245,158,11,0.2);
   animation: badgePop 0.4s var(--ease-spring);
 }
@@ -583,7 +548,7 @@ button { cursor: pointer; font-family: 'Nunito', sans-serif; }
   white-space: nowrap;
   flex-shrink: 0;
 }
-.topic-badge.done       { background: var(--success-lt); color: var(--success-dk); border-color: #86EFAC; }
+.topic-badge.done       { background: var(--success-lt); color: var(--success-dk); border-color: rgba(34,197,94,0.5); }
 .topic-badge.inprogress { background: var(--warning-lt); color: var(--warning-dk); border-color: #FCD34D; }
 
 /* ===== MATERI HEADER ===== */
@@ -664,7 +629,7 @@ button { cursor: pointer; font-family: 'Nunito', sans-serif; }
   gap: 10px;
   align-items: flex-start;
   background: var(--warning-lt);
-  border: 1px solid #FCD34D;
+  border: 1px solid rgba(245,158,11,0.5);
   border-radius: var(--r-md);
   padding: 13px 16px;
   margin: 14px 0;
@@ -674,11 +639,11 @@ button { cursor: pointer; font-family: 'Nunito', sans-serif; }
   line-height: 1.55;
 }
 .info-box::before { content: '💡'; font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
-.info-box.green  { background: var(--success-lt); border-color: #86EFAC; color: var(--success-dk); }
+.info-box.green  { background: var(--success-lt); border-color: rgba(34,197,94,0.5); color: var(--success-dk); }
 .info-box.green::before  { content: '✅'; }
-.info-box.blue   { background: var(--info-lt); border-color: #93C5FD; color: var(--info-dk); }
+.info-box.blue   { background: var(--info-lt); border-color: rgba(59,130,246,0.5); color: var(--info-dk); }
 .info-box.blue::before   { content: '📘'; }
-.info-box.red    { background: var(--danger-lt); border-color: #FCA5A5; color: var(--danger-dk); }
+.info-box.red    { background: var(--danger-lt); border-color: rgba(239,68,68,0.5); color: var(--danger-dk); }
 .info-box.red::before    { content: '⚠️'; }
 
 /* ===== TABLE ===== */
@@ -878,13 +843,13 @@ tr:hover td { background: var(--primary-lt); color: var(--text); transition: bac
 }
 .hint-box {
   background: var(--warning-lt);
-  border: 1px solid #FCD34D;
+  border: 1px solid rgba(245,158,11,0.5);
   color: var(--warning-dk);
 }
 .hint-box::before { content: '💡 Petunjuk: '; }
 .explanation-box {
   background: var(--info-lt);
-  border: 1px solid #93C5FD;
+  border: 1px solid rgba(59,130,246,0.5);
   color: var(--info-dk);
 }
 .explanation-box::before { content: '📘 Penjelasan: '; }
@@ -1113,7 +1078,7 @@ tr:hover td { background: var(--primary-lt); color: var(--text); transition: bac
 @media (max-width: 680px) {
   .subjects-grid { grid-template-columns: 1fr 1fr; }
   .hero h1 { font-size: 1.55rem; }
-  .quiz-card { padding: 22px 18px; min-height: 0; }
+  .quiz-card { padding: 22px 18px; }
 }
 
 @media (max-width: 480px) {
@@ -1123,7 +1088,7 @@ tr:hover td { background: var(--primary-lt); color: var(--text); transition: bac
   .stats-row { gap: 8px; }
   .stat-box { padding: 14px 8px; }
   .stat-num { font-size: 1.5rem; }
-  .quiz-card { padding: 18px 14px; min-height: 0; }
+  .quiz-card { padding: 18px 14px; }
   .content-section { padding: 20px 16px; }
   .hero { padding: 28px 16px 24px; }
   .hero h1 { font-size: 1.4rem; }
@@ -1622,11 +1587,7 @@ tr:hover td { background: var(--primary-lt); color: var(--text); transition: bac
   box-shadow: var(--shadow-sm);
 }
 html.dark .tka-header { background: rgba(30,41,59,0.90); }
-
-/* BUG FIX: nav mobile height = 56px, tka-header harus ikut */
-@media (max-width: 600px) {
-  .tka-header { top: 56px; }
-}
+@media (max-width: 600px) { .tka-header { top: 56px; } }
 
 .tka-header-left { display: flex; align-items: center; gap: 10px; }
 .tka-subject-label { font-family: 'Fredoka', cursive; font-weight: 700; font-size: 1rem; color: var(--text); line-height: 1.2; }

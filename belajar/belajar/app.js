@@ -41,13 +41,11 @@ let readTimerHandle = null;
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
 
-let _toastTimer = null;
 function showToast(msg, duration = 3200) {
   const t = $('toast');
   t.textContent = msg;
   t.classList.add('show');
-  if (_toastTimer) clearTimeout(_toastTimer);
-  _toastTimer = setTimeout(() => { t.classList.remove('show'); _toastTimer = null; }, duration);
+  setTimeout(() => t.classList.remove('show'), duration);
 }
 
 function addActivity(text, color = 'var(--primary)') {
@@ -125,7 +123,7 @@ function showPage(pageId, pushHistory = true) {
   if (pageId === 'home')    updateHome();
   if (pageId === 'monitor') updateMonitor();
 
-  window.scrollTo({ top: 0, behavior: 'instant' });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function showSubject(subject) {
@@ -295,21 +293,20 @@ function renderQuestion() {
     setTimeout(() => { const inp = $('fillInput'); if(inp) inp.focus(); }, 100);
 
   } else {
-    // BUG FIX: Acak posisi pilihan jawaban setiap soal ditampilkan.
-    // Buat salinan opts + simpan jawaban asli, lalu shuffle bersama indeks,
-    // sehingga q._shuffledOpts dan q._shuffledAns selalu fresh per render.
-    const indices = (q.opts || []).map((_, i) => i);
-    for (let i = indices.length - 1; i > 0; i--) {
+    // FIX BUG 2: Acak posisi pilihan jawaban setiap soal ditampilkan.
+    // Fisher-Yates shuffle pada array indeks, lalu petakan ulang opts & ans.
+    const idxArr = q.opts.map((_, i) => i);
+    for (let i = idxArr.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
-      [indices[i], indices[j]] = [indices[j], indices[i]];
+      [idxArr[i], idxArr[j]] = [idxArr[j], idxArr[i]];
     }
-    const shuffledOpts = indices.map(i => q.opts[i]);
-    const shuffledAns  = indices.indexOf(q.ans);
-    // Simpan ke runtime agar checkMC bisa membaca posisi baru
-    q._shuffledOpts = shuffledOpts;
-    q._shuffledAns  = shuffledAns;
+    // sOpts = urutan opts setelah diacak; sAns = posisi baru jawaban benar
+    const sOpts = idxArr.map(i => q.opts[i]);
+    const sAns  = idxArr.indexOf(q.ans);
+    // Simpan di runtime property (tidak mengubah data asli)
+    q._sOpts = sOpts;
+    q._sAns  = sAns;
 
-    // Multiple choice (default)
     card.innerHTML = `
       <div class="quiz-type-badge">🎯 Pilihan Ganda</div>
       <div class="quiz-question">${quizIndex + 1}. ${q.q}</div>
@@ -318,7 +315,7 @@ function renderQuestion() {
         <div class="attempt-dot" id="dot1"></div>
       </div>
       <div class="quiz-options">
-        ${shuffledOpts.map((o, i) => `
+        ${sOpts.map((o, i) => `
           <button class="quiz-option" id="opt${i}" onclick="checkMC(${i})">
             <div class="opt-letter">${'ABCD'[i]}</div>${o}
           </button>`).join('')}
@@ -331,17 +328,15 @@ function renderQuestion() {
 
 /* ---- Multiple Choice check ---- */
 function checkMC(idx) {
-  const q   = currentQuizzes[quizIndex];
-  // Gunakan posisi jawaban yang sudah diacak saat render
-  const ansIdx  = (q._shuffledAns !== undefined) ? q._shuffledAns : q.ans;
+  const q      = currentQuizzes[quizIndex];
+  // FIX BUG 2: gunakan posisi jawaban yang sudah diacak saat render
+  const ansIdx = (q._sAns !== undefined) ? q._sAns : q.ans;
   const correct = idx === ansIdx;
   questionAttempts++;
 
-  // Mark chosen answer visually
   $$('.quiz-option').forEach(b => b.classList.add('disabled'));
   $(`opt${idx}`).classList.add(correct ? 'correct' : 'wrong');
-  // BUG FIX: jangan reveal jawaban benar saat percobaan pertama salah —
-  // reveal hanya dilakukan di handleAnswerResult ketika questionAttempts >= 2
+  // FIX BUG 1: jangan highlight jawaban benar di percobaan pertama yang salah
   if (!correct && questionAttempts >= 2) {
     $(`opt${ansIdx}`)?.classList.add('correct');
   }
@@ -374,14 +369,13 @@ function handleAnswerResult(correct, fillInput = null) {
   const feedback = $('feedbackBox');
   const dot      = $(`dot${questionAttempts - 1}`);
 
-  // Gunakan posisi & label jawaban yang sudah diacak
-  const ansIdx   = (q._shuffledAns  !== undefined) ? q._shuffledAns  : q.ans;
-  const ansLabel = (q._shuffledOpts !== undefined) ? q._shuffledOpts[ansIdx] : (q.opts ? q.opts[q.ans] : q.ans);
+  // FIX BUG 2: gunakan posisi & label jawaban yang sudah diacak
+  const ansIdx   = (q._sAns  !== undefined) ? q._sAns  : q.ans;
+  const ansLabel = (q._sOpts !== undefined) ? q._sOpts[ansIdx] : (q.opts ? q.opts[q.ans] : q.ans);
 
   if (dot) dot.classList.add('used');
 
   if (correct) {
-    // Correct!
     const xpGain = questionAttempts === 1 ? 5 : 2;
     addXP(xpGain);
     quizScore++;
@@ -393,115 +387,48 @@ function handleAnswerResult(correct, fillInput = null) {
 
     if (fillInput) { fillInput.disabled = true; }
     $$('.quiz-option').forEach(b => b.classList.add('disabled'));
-
     $('quizBtnRow').innerHTML = `<button class="btn" onclick="nextQuestion()">Lanjut →</button>`;
 
   } else {
-    // Wrong
     quizWrong++;
     playSound('wrong');
 
     if (questionAttempts === 1) {
-      // First wrong → show HINT only, don't reveal answer
+      // FIX BUG 1: percobaan pertama salah → tampilkan hint saja, JANGAN reveal jawaban
       feedback.className = 'feedback-box wrong';
-      feedback.innerHTML = '❌ Salah. Coba lagi! Lihat petunjuk di bawah.';
       feedback.style.display = 'block';
 
       if (hintBox) hintBox.style.display = 'flex';
 
-      // Re-enable fill input for another try
       if (fillInput) {
-        fillInput.value   = '';
+        // Isi ulang untuk coba lagi
+        fillInput.value    = '';
         fillInput.disabled = false;
         setTimeout(() => fillInput.focus(), 50);
         feedback.innerHTML = '❌ Kurang tepat. Lihat petunjuk, lalu coba sekali lagi!';
+      } else {
+        feedback.innerHTML = '❌ Salah. Coba lagi! Lihat petunjuk di bawah.';
+        // Re-enable semua opsi MC, hapus highlight merah
+        $$('.quiz-option').forEach(b => b.classList.remove('disabled', 'wrong'));
       }
 
-      // Re-enable MC options (reset wrong mark)
-      $$('.quiz-option').forEach(b => {
-        b.classList.remove('disabled', 'wrong');
-      });
-
     } else {
-      // Second wrong → show EXPLANATION + reveal answer
+      // FIX BUG 1: percobaan kedua salah → baru reveal jawaban benar + penjelasan
       if (hintBox) hintBox.style.display = 'flex';
       if (explBox) explBox.style.display = 'flex';
 
       feedback.className = 'feedback-box wrong';
+      feedback.style.display = 'block';
+
       if (q.type === 'fill') {
         feedback.innerHTML = `❌ Jawaban yang benar: <strong>${q.ans}</strong>`;
         if (fillInput) fillInput.disabled = true;
       } else {
+        // FIX BUG 2: gunakan ansLabel dari shuffled opts
         feedback.innerHTML = `❌ Jawaban yang benar: <strong>${ansLabel}</strong>`;
         $$('.quiz-option').forEach(b => b.classList.add('disabled'));
         $(`opt${ansIdx}`)?.classList.add('correct');
       }
-      feedback.style.display = 'block';
-
-      $('quizBtnRow').innerHTML = `<button class="btn" onclick="nextQuestion()">Lanjut →</button>`;
-    }
-  }
-}
-
-  if (dot) dot.classList.add('used');
-
-  if (correct) {
-    // Correct!
-    const xpGain = questionAttempts === 1 ? 5 : 2;
-    addXP(xpGain);
-    quizScore++;
-    playSound('correct');
-
-    feedback.className = 'feedback-box correct';
-    feedback.innerHTML = `✅ Benar! ${questionAttempts === 1 ? '+5 XP 🎉' : '+2 XP'}`;
-    feedback.style.display = 'block';
-
-    if (fillInput) { fillInput.disabled = true; }
-    $$('.quiz-option').forEach(b => b.classList.add('disabled'));
-
-    $('quizBtnRow').innerHTML = `<button class="btn" onclick="nextQuestion()">Lanjut →</button>`;
-
-  } else {
-    // Wrong
-    quizWrong++;
-    playSound('wrong');
-
-    if (questionAttempts === 1) {
-      // First wrong → show HINT
-      feedback.className = 'feedback-box wrong';
-      feedback.innerHTML = '❌ Salah. Coba lagi! Lihat petunjuk di bawah.';
-      feedback.style.display = 'block';
-
-      if (hintBox) hintBox.style.display = 'flex';
-
-      // Re-enable fill input for another try
-      if (fillInput) {
-        fillInput.value   = '';
-        fillInput.disabled = false;
-        setTimeout(() => fillInput.focus(), 50);
-        feedback.innerHTML = '❌ Kurang tepat. Lihat petunjuk, lalu coba sekali lagi!';
-      }
-
-      // Re-enable MC options (reset wrong mark)
-      $$('.quiz-option').forEach(b => {
-        b.classList.remove('disabled', 'wrong');
-      });
-
-    } else {
-      // Second wrong → show EXPLANATION + reveal answer
-      if (hintBox) hintBox.style.display = 'flex';
-      if (explBox) explBox.style.display = 'flex';
-
-      feedback.className = 'feedback-box wrong';
-      if (q.type === 'fill') {
-        feedback.innerHTML = `❌ Jawaban yang benar: <strong>${q.ans}</strong>`;
-        if (fillInput) fillInput.disabled = true;
-      } else {
-        feedback.innerHTML = `❌ Jawaban yang benar: <strong>${q.opts[q.ans]}</strong>`;
-        $$('.quiz-option').forEach(b => b.classList.add('disabled'));
-        $(`opt${q.ans}`)?.classList.add('correct');
-      }
-      feedback.style.display = 'block';
 
       $('quizBtnRow').innerHTML = `<button class="btn" onclick="nextQuestion()">Lanjut →</button>`;
     }
@@ -973,26 +900,23 @@ function resetAll() {
 
   document.getElementById('modalConfirm').addEventListener('click', () => {
     closeModal();
-    // Jalankan reset setelah modal selesai menutup
     setTimeout(() => {
-      // Reset semua data STATE (xp, streak, read, quizScores, quizAttempts, activity, tkaHistory, dll.)
+      // FIX BUG 3: reset STATE (hapus localStorage)
       STATE.reset();
 
-      // BUG FIX: reset juga runtime quiz state agar tidak ada sisa dari sesi sebelumnya
-      quizIndex        = 0;
-      quizScore        = 0;
-      quizWrong        = 0;
-      questionAttempts = 0;
-      currentQuizzes   = [];
-      currentSubject   = '';
-      currentTopicId   = '';
+      // FIX BUG 3: reset semua runtime variable kuis agar tidak ada sisa sesi lama
+      quizIndex         = 0;
+      quizScore         = 0;
+      quizWrong         = 0;
+      questionAttempts  = 0;
+      currentQuizzes    = [];
+      currentSubject    = '';
+      currentTopicId    = '';
       currentFlashcards = [];
-      fcIndex          = 0;
+      fcIndex           = 0;
 
-      // Update tampilan beranda
+      // FIX BUG 3: update SEMUA halaman yang menampilkan data
       updateHome();
-
-      // BUG FIX: update juga tampilan monitor agar datanya ikut terhapus dari UI
       updateMonitor();
 
       // Reset badge UI
