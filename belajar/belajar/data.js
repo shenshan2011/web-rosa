@@ -3,7 +3,7 @@
 // ============================================================
 
 // ---------- DAFTAR TOPIK PER MAPEL ----------
-const TOPIC_LIST = {
+export const TOPIC_LIST = {
   ipa: [
     { id:'ipa-1',  icon:'🦋', name:'Metamorfosis',                    sub:'Sempurna & Tidak Sempurna' },
     { id:'ipa-2',  icon:'🐣', name:'Perkembangbiakan Hewan',           sub:'Ovipar, Vivipar, Ovovivipar' },
@@ -42,7 +42,7 @@ const TOPIC_LIST = {
 };
 
 // ---------- KONTEN MATERI LENGKAP ----------
-const MATERI_CONTENT = {
+export const MATERI_CONTENT = {
 
   // ---- IPA ----
   'ipa-1': {
@@ -974,7 +974,7 @@ const MATERI_CONTENT = {
 };
 
 // ---------- DATA KUIS LENGKAP ----------
-const QUIZ_DATA = {
+export const QUIZ_DATA = {
 // ================================================================
   //  ipa-1 | METAMORFOSIS (Sempurna & Tidak Sempurna)
   // ================================================================
@@ -2038,7 +2038,7 @@ const QUIZ_DATA = {
 // Tambahkan ke objek QUIZ_DATA yang sudah ada (ipa-1 s.d. ipa-6)
 // Contoh penggabungan: Object.assign(QUIZ_DATA, { 'ipa-7': [...], ... })
 
-const QUIZ_DATA_PART2 = {
+export const QUIZ_DATA_PART2 = {
 
   // ================================================================
   //  ipa-7 | RANGKAIAN LISTRIK (Seri & Paralel)
@@ -3150,7 +3150,7 @@ const QUIZ_DATA_PART2 = {
 //          fill: jawaban singkat, '_' pada string q
 // ============================================================
 
-const QUIZ_DATA_BINDO_1 = {
+export const QUIZ_DATA_BINDO_1 = {
 
   // ================================================================
   //  bindo-1 | PERIBAHASA
@@ -3933,7 +3933,7 @@ const QUIZ_DATA_BINDO_1 = {
 //          fill: jawaban singkat, '_' pada string q
 // ============================================================
 
-const QUIZ_DATA_BINDO_2 = {
+export const QUIZ_DATA_BINDO_2 = {
 
   // ================================================================
   //  bindo-5 | SINONIM (Kata yang Bermakna Sama/Mirip)
@@ -4690,7 +4690,7 @@ const QUIZ_DATA_BINDO_2 = {
 //          explanation: wajib langkah demi langkah
 // ============================================================
 
-const QUIZ_DATA_MTK_1 = {
+export const QUIZ_DATA_MTK_1 = {
 
   // ================================================================
   //  mtk-1 | PENGOLAHAN DATA (Tabel, Diagram Batang & Lingkaran)
@@ -5427,7 +5427,7 @@ const QUIZ_DATA_MTK_1 = {
 //  BelajarCeria | Senior Education Content Creator
 // ============================================================
 
-const QUIZ_DATA_MTK_2 = {
+export const QUIZ_DATA_MTK_2 = {
 
   // ================================================================
   //  mtk-6 | KELILING BANGUN DATAR (Persegi, Segitiga, Lingkaran)
@@ -6011,7 +6011,7 @@ Object.assign(QUIZ_DATA,
   typeof QUIZ_DATA_MTK_2     !== 'undefined' ? QUIZ_DATA_MTK_2     : {}
 );
 
-const TKA_DATA = {
+export const TKA_DATA = {
 
 // ════════════════════════════════════════
 //  IPA — 40 SOAL
@@ -6783,3 +6783,15 @@ mtk: [
 
 };
 // END TKA_DATA
+
+// ============================================================
+//  MERGE — gabungkan semua bagian QUIZ_DATA jadi satu
+// ============================================================
+export const QUIZ_DATA_ALL = {
+  ...QUIZ_DATA,
+  ...QUIZ_DATA_PART2,
+  ...QUIZ_DATA_BINDO_1,
+  ...QUIZ_DATA_BINDO_2,
+  ...QUIZ_DATA_MTK_1,
+  ...QUIZ_DATA_MTK_2,
+};
